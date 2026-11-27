@@ -11,14 +11,13 @@ execution, and dashboard/tutorials.
 
 ## Prerequisites
 
-- Node.js 18.18 or later
+- Node.js 22.12 or later
 
 ## Step 1: Register Your App ID
 
-1. Log in to your Deriv account and go to the [API Token page](https://app.deriv.com/account/api-token) to create a token with the required scopes.
-2. Navigate to [App Registration](https://developers.deriv.com/dashboard/) and register a new application.
-3. Set the **Redirect URI** to the URL where you will host this app (e.g. `http://localhost:4003` for local development).
-4. Copy the **App ID** shown after registration — you will need it in the next step.
+1. Sign in to [Deriv Developers](https://developers.deriv.com/dashboard/) and register a **new OAuth 2.0 application**. Legacy App IDs are not compatible with the new Deriv APIs.
+2. Select the `trade` scope (and any additional scopes your app actually needs). Copy the new registered App ID.
+3. Register the exact callback origin used by this app (for example `https://your-domain.com`; local development may use `http://localhost:4003`). The URL must match exactly, including scheme, host, port, and path.
 
 ## Step 2: Configure `.env`
 
@@ -36,6 +35,9 @@ NEXT_PUBLIC_DERIV_APP_ID=your_app_id_here
 NEXT_PUBLIC_DERIV_ENV=production
 NEXT_PUBLIC_DERIV_REFERRAL_LINK=your_referral_link_here
 
+# Optional: exact callback URL; if set, the serverless token endpoint enforces it.
+DERIV_OAUTH_REDIRECT_URI=https://your-domain.com
+
 # Optional: Google Drive integration (leave blank to disable).
 GD_CLIENT_ID=
 GD_APP_ID=
@@ -46,11 +48,19 @@ GD_API_KEY=
 |---|---|
 | `NEXT_PUBLIC_DERIV_APP_ID` | Deriv app id issued for your registered app. Drives OAuth login/sign-up and WebSocket connections. Without it, Log in / Sign up stay disabled. |
 | `NEXT_PUBLIC_DERIV_ENV` | `production` for live Deriv endpoints; `preview` (or `staging`) for staging. Read by both the bot's URL resolver and `@deriv/core` for OAuth. |
-| `NEXT_PUBLIC_DERIV_REFERRAL_LINK` | Affiliate referral link — appended as `affiliate_token` / `utm_campaign` on OAuth (optional). |
+| `NEXT_PUBLIC_DERIV_REFERRAL_LINK` | Affiliate referral link — forwarded to Deriv signup for attribution (optional). |
+| `DERIV_OAUTH_REDIRECT_URI` | Optional exact callback URL allowlist for the server-side token exchange. If omitted, the endpoint only accepts the current request origin. |
 | `GD_CLIENT_ID` / `GD_APP_ID` / `GD_API_KEY` | Google Drive integration credentials for saving/loading strategies (optional). |
 
-> These variables are injected at **build time** via Rsbuild's `source.define`
-> (see `rsbuild.config.ts`), so re-build after changing them.
+> `NEXT_PUBLIC_DERIV_APP_ID`, `NEXT_PUBLIC_DERIV_ENV`, and referral settings are injected at **build time** via Rsbuild's `source.define`. Rebuild after changing them. Configure the same App ID in the Vercel project environment so the serverless function can validate it.
+
+### OAuth callback and hosting
+
+This app uses Deriv's OAuth 2.0 Authorization Code + PKCE flow. The callback validates `state`, then posts the one-time code and original PKCE verifier to `/api/deriv/oauth/token`. That endpoint is a Vercel Node.js Function and exchanges the code server-side with Deriv. The access token is then used as a Bearer token for the new Deriv REST API and for requesting a one-time authenticated WebSocket URL.
+
+**The deployment must support the included Vercel Function.** A static-only host must provide an equivalent same-origin server endpoint; otherwise OAuth token exchange will fail. No refresh token is issued by Deriv for third-party OAuth apps. When the access token expires or Deriv returns 401, the app clears the stale account session and starts OAuth again.
+
+Set `NEXT_PUBLIC_DERIV_APP_ID` in the Vercel build/runtime environment to the new OAuth app ID from the Deriv Developers dashboard. Set `DERIV_OAUTH_REDIRECT_URI` to the exact registered callback URL (recommended). Register every production/staging/local callback URL in the Deriv app dashboard. Never put an API secret or user token in source control.
 
 ## Branding (`brand.config.json`)
 
