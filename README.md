@@ -80,8 +80,12 @@ npm install
 npm run dev
 ```
 
-The app is available at `http://localhost:4003`. (`npm install` and `npm run dev`
-also regenerate brand CSS — see Branding below.)
+The Rsbuild-only dev server is available at `http://localhost:4003`. To test the
+OAuth callback locally, run the app through Vercel's local function runtime instead:
+`npx vercel dev --listen 4003`. This serves both the SPA and the
+`/api/deriv/oauth/token` function on the same origin. Register
+`http://localhost:4003` as a redirect URL in your Deriv OAuth app. (`npm install`
+and `npm run dev` also regenerate brand CSS — see Branding below.)
 
 ## Step 4: Build for Production
 
