@@ -7,6 +7,9 @@ import { getInitialLanguage } from '@deriv-com/translations';
 import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
 import brandConfig from '../../../../../brand.config.json';
 
+// Deriv OAuth requires this exact URL to be registered on the OAuth application.
+export const DERIV_OAUTH_REDIRECT_URI = 'https://www.optafx.site';
+
 export const PRODUCTION_DOMAINS = { COM: brandConfig.platform.hostname.production.com } as const;
 export const STAGING_DOMAINS = { COM: brandConfig.platform.hostname.staging.com } as const;
 export const WS_SERVERS = {
@@ -52,7 +55,7 @@ export const generateOAuthURL = async (prompt?: string): Promise<string> => {
   const clientId = process.env.NEXT_PUBLIC_DERIV_APP_ID?.trim();
   if (!clientId) throw new Error('Deriv registered App ID is missing. Set NEXT_PUBLIC_DERIV_APP_ID in the deployment environment.');
   const config: AuthConfig = {
-    clientId, redirectUri: window.location.origin, scopes: 'trade', lang: getInitialLanguage(),
+    clientId, redirectUri: DERIV_OAUTH_REDIRECT_URI, scopes: 'trade', lang: getInitialLanguage(),
   };
   const referralLink = process.env.NEXT_PUBLIC_DERIV_REFERRAL_LINK;
   if (referralLink) {
