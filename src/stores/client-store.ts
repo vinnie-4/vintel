@@ -243,7 +243,7 @@ export default class ClientStore {
      */
 
     logout = async () => {
-        if (localStorage.getItem('active_loginid')) {
+        {
             // Clear DerivAPI singleton instance and close WebSocket
             const { clearDerivApiInstance } = await import('@/external/bot-skeleton/services/api/appId');
             clearDerivApiInstance();
@@ -254,8 +254,8 @@ export default class ClientStore {
             DerivWSAccountsService.clearCache();
 
             // Clear OAuth token via vendored deriv-core
-            const { clearAuthInfo } = await import('@/external/deriv-core');
-            clearAuthInfo();
+            const { clearAllAuthData } = await import('@/external/deriv-core');
+            clearAllAuthData();
 
             // Reset all the states
             this.account_list = [];
