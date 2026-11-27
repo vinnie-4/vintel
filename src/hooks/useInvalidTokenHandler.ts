@@ -13,6 +13,8 @@ export const useInvalidTokenHandler = (): { unregisterHandler: () => void } => {
     if (recoveryInProgress) return;
     recoveryInProgress = true;
     try {
+      const { clearDerivApiInstance } = await import('@/external/bot-skeleton/services/api/appId');
+      clearDerivApiInstance();
       clearAllAuthData();
       localStorage.removeItem('active_loginid');
       localStorage.removeItem('account_type');
