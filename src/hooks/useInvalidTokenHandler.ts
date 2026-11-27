@@ -1,66 +1,45 @@
-import { useEffect } from 'react';
-import { clearAuthInfo } from '@/external/deriv-core';
+import { useCallback, useEffect } from 'react';
+import { clearAllAuthData } from '@/external/deriv-core';
 import { observer as globalObserver } from '@/external/bot-skeleton/utils/observer';
+import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
 import { ErrorLogger } from '@/utils/error-logger';
-import { reloadPage, replaceUrl } from '@/utils/navigation-utils';
+import { replaceUrl } from '@/utils/navigation-utils';
+import { generateOAuthURL } from '@/components/shared';
 
-/**
- * Hook to handle invalid token events by clearing auth data and redirecting to OAuth login
- *
- * This hook listens for 'InvalidToken' events emitted by the API base when
- * a token is invalid. When such an event is detected, it clears the invalid
- * authentication data and redirects to OAuth login to prevent infinite reload loops.
- *
- * @returns {{ unregisterHandler: () => void }} An object containing a function to unregister the event handler
- */
+let recoveryInProgress = false;
+
 export const useInvalidTokenHandler = (): { unregisterHandler: () => void } => {
-    const handleInvalidToken = async () => {
-        try {
-            // Clear invalid auth token via vendored deriv-core
-            clearAuthInfo();
-            localStorage.removeItem('active_loginid');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('accountsList');
-            localStorage.removeItem('clientAccounts');
+  const handleInvalidToken = useCallback(async () => {
+    if (recoveryInProgress) return;
+    recoveryInProgress = true;
+    try {
+      clearAllAuthData();
+      localStorage.removeItem('active_loginid');
+      localStorage.removeItem('account_type');
+      localStorage.removeItem('accountsList');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('clientAccounts');
+      DerivWSAccountsService.clearStoredAccounts();
+      DerivWSAccountsService.clearCache();
 
-            // Clear sessionStorage completely to remove any stale auth data
-            sessionStorage.clear();
+      const oauthUrl = await generateOAuthURL();
+      if (!oauthUrl) throw new Error('Deriv App ID is not configured for this deployment.');
+      replaceUrl(oauthUrl);
+    } catch (error) {
+      recoveryInProgress = false;
+      ErrorLogger.error('InvalidToken', 'Could not restart Deriv OAuth login', error);
+      window.dispatchEvent(new CustomEvent('vintel:auth-error', {
+        detail: { message: error instanceof Error ? error.message : 'Authentication recovery failed.' },
+      }));
+    }
+  }, []);
 
-            // Redirect to OAuth login instead of reload to get fresh authentication
-            const { generateOAuthURL } = await import('@/components/shared');
-            const oauthUrl = await generateOAuthURL();
+  useEffect(() => {
+    globalObserver.register('InvalidToken', handleInvalidToken);
+    return () => globalObserver.unregister('InvalidToken', handleInvalidToken);
+  }, [handleInvalidToken]);
 
-            if (oauthUrl) {
-                // Use replace to prevent back button from returning to invalid state
-                replaceUrl(oauthUrl);
-            } else {
-                // Fallback: reload if OAuth URL generation fails
-                ErrorLogger.error('InvalidToken', 'Failed to generate OAuth URL, falling back to reload');
-                reloadPage();
-            }
-        } catch (error) {
-            ErrorLogger.error('InvalidToken', 'Error handling invalid token', error);
-            // Last resort: reload the page
-            reloadPage();
-        }
-    };
-
-    // Subscribe to the InvalidToken event
-    useEffect(() => {
-        globalObserver.register('InvalidToken', handleInvalidToken);
-
-        // Cleanup the subscription when the component unmounts
-        return () => {
-            globalObserver.unregister('InvalidToken', handleInvalidToken);
-        };
-    }, []);
-
-    // Return a function to unregister the handler manually if needed
-    return {
-        unregisterHandler: () => {
-            globalObserver.unregister('InvalidToken', handleInvalidToken);
-        },
-    };
+  return { unregisterHandler: () => globalObserver.unregister('InvalidToken', handleInvalidToken) };
 };
 
 export default useInvalidTokenHandler;
