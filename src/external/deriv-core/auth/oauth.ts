@@ -12,6 +12,22 @@ import {
 } from './storage';
 import { getAuthBaseUrl } from '../config/urls';
 
+function describeOAuthError(value: unknown): string | undefined {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (!value || typeof value !== 'object') return undefined;
+  const record = value as Record<string, unknown>;
+  for (const key of ['error_description', 'message', 'description', 'error', 'code']) {
+    const detail = describeOAuthError(record[key]);
+    if (detail) return detail;
+  }
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized && serialized !== '{}' ? serialized : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function buildPkceParams(config: AuthConfig): Promise<URLSearchParams> {
   const csrfToken = generateRandomBase64url(32);
   const codeVerifier = generateRandomBase64url(32);
@@ -106,35 +122,48 @@ export function validateCallback(params: CallbackParams, redirectUri: string): s
  * Deriv's current OAuth guidance requires the token exchange to happen server-side.
  */
 export async function exchangeCodeForTokens(params: TokenExchangeParams): Promise<AuthInfo> {
-  const response = await fetch('/api/deriv/oauth/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    credentials: 'same-origin',
-    body: JSON.stringify({
-      code: params.code,
-      client_id: params.clientId,
-      redirect_uri: params.redirectUri,
-      code_verifier: params.codeVerifier,
-    }),
-  });
-
-  const tokenData = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const detail = tokenData.error_description || tokenData.error || `HTTP ${response.status}`;
-    throw new OAuthError(`Deriv token exchange failed: ${detail}`);
+  let response: Response;
+  try {
+    response = await fetch('/api/deriv/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        code: params.code,
+        client_id: params.clientId,
+        redirect_uri: params.redirectUri,
+        code_verifier: params.codeVerifier,
+      }),
+    });
+  } catch (error) {
+    const detail = describeOAuthError(error);
+    throw new OAuthError(`Could not reach the Deriv token service.${detail ? ` ${detail}` : ' Check your connection and try again.'}`);
   }
 
-  if (!tokenData.access_token || !Number.isFinite(Number(tokenData.expires_in))) {
+  const tokenData: unknown = await response.json().catch(() => ({}));
+  const tokenRecord = tokenData && typeof tokenData === 'object'
+    ? tokenData as Record<string, unknown>
+    : {};
+  if (!response.ok) {
+    const detail = describeOAuthError(tokenRecord.error_description)
+      || describeOAuthError(tokenRecord.error)
+      || describeOAuthError(tokenRecord.message)
+      || `HTTP ${response.status}`;
+    throw new OAuthError(`Deriv token exchange failed (${response.status}): ${detail}`);
+  }
+
+  if (typeof tokenRecord.access_token !== 'string' || !tokenRecord.access_token ||
+      !Number.isFinite(Number(tokenRecord.expires_in))) {
     throw new OAuthError('Deriv returned an incomplete access-token response.');
   }
 
-  const expiresIn = Number(tokenData.expires_in);
+  const expiresIn = Number(tokenRecord.expires_in);
   const authInfo: AuthInfo = {
-    access_token: tokenData.access_token,
-    token_type: tokenData.token_type || 'Bearer',
+    access_token: tokenRecord.access_token,
+    token_type: typeof tokenRecord.token_type === 'string' ? tokenRecord.token_type : 'Bearer',
     expires_in: expiresIn,
     expires_at: Math.floor(Date.now() / 1000) + expiresIn,
-    scope: tokenData.scope || 'trade',
+    scope: typeof tokenRecord.scope === 'string' ? tokenRecord.scope : 'trade',
   };
 
   storeAuthInfo(authInfo);
