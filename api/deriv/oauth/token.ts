@@ -30,7 +30,13 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     return;
   }
 
-  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  let body: unknown;
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  } catch {
+    res.status(400).json({ error: 'invalid_json' });
+    return;
+  }
   const { code, client_id: clientId, redirect_uri: redirectUri, code_verifier: codeVerifier } =
     (body || {}) as Record<string, string>;
 
@@ -56,8 +62,21 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
   const forwardedProto = req.headers['x-forwarded-proto'] || 'https';
   const requestOrigin = `${Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto}://${Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost}`;
   const configuredRedirect = process.env.DERIV_OAUTH_REDIRECT_URI?.trim();
+  const expectedRedirect = configuredRedirect
+    ? (() => {
+        try {
+          const allowed = new URL(configuredRedirect);
+          return allowed.origin + allowed.pathname;
+        } catch {
+          return '';
+        }
+      })()
+    : '';
 
-  if ((configuredRedirect && callback.origin + callback.pathname !== configuredRedirect) ||
+  const requestOriginHeader = req.headers.origin;
+  const requestOriginValue = Array.isArray(requestOriginHeader) ? requestOriginHeader[0] : requestOriginHeader;
+  if ((requestOriginValue && requestOriginValue !== requestOrigin) ||
+      (configuredRedirect && callback.origin + callback.pathname !== expectedRedirect) ||
       (!configuredRedirect && callback.origin !== requestOrigin) ||
       (callback.protocol !== 'https:' && callback.hostname !== 'localhost' && callback.hostname !== '127.0.0.1')) {
     res.status(400).json({ error: 'redirect_uri_mismatch', error_description: 'The callback URL is not allowed for this deployment.' });
