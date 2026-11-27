@@ -243,7 +243,6 @@ export default class ClientStore {
      */
 
     logout = async () => {
-        {
             // Clear DerivAPI singleton instance and close WebSocket
             const { clearDerivApiInstance } = await import('@/external/bot-skeleton/services/api/appId');
             clearDerivApiInstance();
@@ -298,7 +297,6 @@ export default class ClientStore {
                     token: null,
                 });
             }
-        }
     };
 
     /**
