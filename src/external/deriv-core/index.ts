@@ -1,14 +1,6 @@
 // Vendored subset of @deriv/core.
-//
-// The bot is an owned, standalone rsbuild app and must build without the
-// monorepo's `packages/core` workspace (the BFF copies only `templates/bot/**`
-// into the partner's standalone app). `@deriv/core` has zero runtime deps and
-// the bot only needs its auth/config layer, so that subset is vendored here.
-// React hooks and the WebSocket client are intentionally NOT vendored — the bot
-// has its own DerivWSAccountsService. To update, re-copy auth/, config/, and
-// types/ from packages/core/src.
-
-// Auth
+// Authentication uses Deriv OAuth 2.0 Authorization Code + PKCE. Token exchange
+// is routed through the same-origin backend; Deriv does not issue refresh tokens.
 export {
   buildAuthorizationUrl,
   buildSignUpUrl,
@@ -17,7 +9,6 @@ export {
   parseCallbackParams,
   validateCallback,
   exchangeCodeForTokens,
-  refreshAccessToken,
   handleOAuthCallback,
   cleanupUrl,
   OAuthError,
@@ -49,7 +40,6 @@ export {
   resolveReferralViaProxy,
 } from './auth';
 
-// Types
 export type {
   AuthConfig,
   AuthInfo,
@@ -73,5 +63,4 @@ export type {
   ProposalParams,
 } from './types';
 
-// Config
 export { getAuthBaseUrl, getApiBaseUrl, getPublicWsUrl } from './config';
