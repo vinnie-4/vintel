@@ -1,72 +1,33 @@
 import type { AuthInfo, DerivAccount, OTPResponse } from '../types';
-import {
-  storeDerivAccounts,
-  setActiveLoginId,
-  setAccountType,
-  clearAllAuthData,
-} from './storage';
+import { storeDerivAccounts, setActiveLoginId, setAccountType, clearAllAuthData } from './storage';
 import { getApiBaseUrl } from '../config/urls';
 
-/**
- * Fetch the list of trading accounts for the authenticated user.
- */
-export async function fetchAccounts(
-  authInfo: AuthInfo,
-  clientId: string
-): Promise<DerivAccount[]> {
+/** Legacy compatibility wrapper. New application code uses DerivWSAccountsService. */
+export async function fetchAccounts(authInfo: AuthInfo, _clientId?: string): Promise<DerivAccount[]> {
   const response = await fetch(`${getApiBaseUrl()}/accounts`, {
-    headers: {
-      Authorization: `Bearer ${authInfo.access_token}`,
-      'Deriv-App-ID': clientId,
-    },
+    headers: { Authorization: `Bearer ${authInfo.access_token}`, Accept: 'application/json' },
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch accounts (${response.status})`);
-  }
-
-  const data = await response.json();
-  const accounts: DerivAccount[] = data.data;
-
+  if (!response.ok) throw new Error(`Failed to fetch Deriv accounts (${response.status})`);
+  const payload = await response.json();
+  const accounts: DerivAccount[] = Array.isArray(payload.data) ? payload.data : [];
   storeDerivAccounts(accounts);
-
-  if (accounts.length > 0) {
-    const firstAccount = accounts[0];
-    setActiveLoginId(firstAccount.account_id);
-    setAccountType(firstAccount.account_type);
+  if (accounts.length) {
+    setActiveLoginId(accounts[0].account_id);
+    setAccountType(accounts[0].account_type);
   }
-
   return accounts;
 }
 
-/**
- * Get a one-time WebSocket URL for an authenticated session.
- */
-export async function getWebSocketOTP(
-  accountId: string,
-  authInfo: AuthInfo,
-  clientId: string
-): Promise<string> {
-  const response = await fetch(`${getApiBaseUrl()}/accounts/${accountId}/otp`, {
+/** Legacy compatibility wrapper. New application code uses DerivWSAccountsService. */
+export async function getWebSocketOTP(accountId: string, authInfo: AuthInfo, _clientId?: string): Promise<string> {
+  const response = await fetch(`${getApiBaseUrl()}/accounts/${encodeURIComponent(accountId)}/otp`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${authInfo.access_token}`,
-      'Deriv-App-ID': clientId,
-    },
+    headers: { Authorization: `Bearer ${authInfo.access_token}`, Accept: 'application/json' },
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to get WebSocket OTP (${response.status})`);
-  }
-
-  const data: OTPResponse = await response.json();
-  return data.data.url;
+  if (!response.ok) throw new Error(`Failed to get Deriv WebSocket OTP (${response.status})`);
+  const payload: OTPResponse = await response.json();
+  if (!payload.data?.url) throw new Error('Deriv returned an empty WebSocket OTP URL.');
+  return payload.data.url;
 }
 
-/**
- * Perform logout: clear all auth data.
- * Caller is responsible for closing any open WebSocket connections and resetting UI.
- */
-export function logout(): void {
-  clearAllAuthData();
-}
+export function logout(): void { clearAllAuthData(); }
