@@ -3,7 +3,7 @@
 export {
   buildAuthorizationUrl, buildSignUpUrl, initiateLogin, initiateSignUp,
   parseCallbackParams, validateCallback, exchangeCodeForTokens, handleOAuthCallback,
-  cleanupUrl, OAuthError, fetchAccounts, getWebSocketOTP, logout,
+  cleanupUrl, refreshAccessToken, OAuthError, fetchAccounts, getWebSocketOTP, logout,
   generateRandomBase64url, sha256Base64url, base64urlEncode,
   storeCSRFToken, getCSRFToken, clearCSRFToken, storeCodeVerifier, getCodeVerifier,
   clearCodeVerifier, storeAuthInfo, getAuthInfo, hasStoredAuthInfo, clearAuthInfo,
