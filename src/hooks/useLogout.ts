@@ -23,7 +23,8 @@ export const useLogout = () => {
             // If logout fails, clear only auth-related storage keys
             // This preserves user preferences (theme, language, etc.) while ensuring auth data is cleared
             try {
-                // Clear auth token via vendored deriv-core
+                const { clearDerivApiInstance } = await import('@/external/bot-skeleton/services/api/appId');
+                clearDerivApiInstance();
                 clearAllAuthData();
                 DerivWSAccountsService.clearStoredAccounts();
                 DerivWSAccountsService.clearCache();
