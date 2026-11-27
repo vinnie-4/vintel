@@ -168,6 +168,15 @@ export async function handleOAuthCallback(callbackUrl: string, config: AuthConfi
   return authInfo;
 }
 
+/**
+ * Backward-compatible replacement for the retired refresh-token grant.
+ * Deriv OAuth apps receive no refresh token; start a fresh authorization flow.
+ */
+export async function refreshAccessToken(_refreshToken: string, _clientId: string): Promise<AuthInfo> {
+  clearAllAuthData();
+  throw new OAuthError('Deriv OAuth does not issue refresh tokens. Please sign in again.');
+}
+
 export function cleanupUrl(baseUrl: string): void {
   if (typeof window === 'undefined') return;
   const url = new URL(window.location.href);
