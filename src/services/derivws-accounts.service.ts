@@ -1,4 +1,5 @@
-import { getApiBaseUrl, storeDerivAccounts, clearDerivAccounts } from '@/external/deriv-core';
+import { getApiBaseUrl } from '@/external/deriv-core/config/urls';
+import { storeDerivAccounts, clearDerivAccounts } from '@/external/deriv-core/auth/storage';
 
 export interface DerivAccount {
   account_id: string;
@@ -15,10 +16,7 @@ const notifyExpiredToken = (status: number) => {
   if (status === 401) window.dispatchEvent(new CustomEvent('vintel:auth-expired'));
 };
 
-/**
- * Single DerivWS account/OTP client used by the OAuth callback and WebSocket
- * connection lifecycle. OAuth Bearer tokens do not require Deriv-App-ID.
- */
+/** The single account/OTP implementation shared by OAuth and WebSocket flows. */
 export class DerivWSAccountsService {
   private static accountsFetchPromise: Promise<DerivAccount[]> | null = null;
   private static otpFetchPromises = new Map<string, Promise<string>>();
