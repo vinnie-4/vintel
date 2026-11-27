@@ -26,6 +26,7 @@ const LanguageHandler = ({ children }: { children: React.ReactNode }) => {
 };
 
 const routerBasename = isPreviewMode() ? PREVIEW_BASE_PATH : undefined;
+let loginRedirectInProgress = false;
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path='/' element={
@@ -111,7 +112,8 @@ function App() {
     };
 
     function restartLogin(message: string) {
-      if (isRetrying) return;
+      if (loginRedirectInProgress) return;
+      loginRedirectInProgress = true;
       setIsRetrying(true);
       setAuthError(message);
       void (async () => {
@@ -124,6 +126,7 @@ function App() {
           const url = await generateOAuthURL();
           window.location.replace(url);
         } catch (error) {
+          loginRedirectInProgress = false;
           setIsRetrying(false);
           setAuthError(error instanceof Error ? error.message : message);
         }
@@ -140,11 +143,14 @@ function App() {
   }, []);
 
   const retryLogin = async () => {
+    if (loginRedirectInProgress) return;
+    loginRedirectInProgress = true;
     setIsRetrying(true);
     try {
       const url = await generateOAuthURL();
       window.location.assign(url);
     } catch (error) {
+      loginRedirectInProgress = false;
       setIsRetrying(false);
       setAuthError(error instanceof Error ? error.message : 'Could not start Deriv login.');
     }
