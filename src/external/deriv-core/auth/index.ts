@@ -1,7 +1,7 @@
 export {
   buildAuthorizationUrl, buildSignUpUrl, initiateLogin, initiateSignUp,
   parseCallbackParams, validateCallback, exchangeCodeForTokens, handleOAuthCallback,
-  cleanupUrl, OAuthError,
+  cleanupUrl, refreshAccessToken, OAuthError,
 } from './oauth';
 export { fetchAccounts, getWebSocketOTP, logout } from './accounts';
 export { parseReferralLink, parseLandingParams, resolveReferralViaProxy } from './referral';
