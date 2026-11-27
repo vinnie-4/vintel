@@ -266,7 +266,12 @@ class APIBase {
                     ? handleBackendError(error)
                     : error.message || 'Authorization failed';
 
-                // Authorization error
+                // Invalid OAuth access tokens require a fresh Deriv authorization-code flow.
+                const errorCode = String(error.code || error.error?.code || '');
+                if (errorCode === 'InvalidToken' || /invalid token|token expired/i.test(errorMessage)) {
+                    globalObserver.emit('InvalidToken');
+                }
+
                 console.error('Authorization error:', errorMessage);
 
                 setIsAuthorizing(false);
@@ -359,6 +364,10 @@ class APIBase {
             this.subscribe();
         } catch (e) {
             this.is_authorized = false;
+            const caughtMessage = e instanceof Error ? e.message : String(e);
+            if (/invalid token|token expired|unauthorized/i.test(caughtMessage)) {
+                globalObserver.emit('InvalidToken');
+            }
             clearAuthData();
             setIsAuthorized(false);
             globalObserver.emit('Error', e);
