@@ -12,7 +12,7 @@ import { StoreProvider } from '@/hooks/useStore';
 import { isPreviewMode, PREVIEW_BASE_PATH } from '@/utils/is-preview-mode';
 import { localize, TranslationProvider } from '@deriv-com/translations';
 import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
-import { generateOAuthURL } from '@/components/shared';
+import { DERIV_OAUTH_REDIRECT_URI, generateOAuthURL } from '@/components/shared';
 import CoreStoreProvider from './CoreStoreProvider';
 import i18nInstance from './i18n';
 import './app-root.scss';
@@ -82,7 +82,7 @@ function App() {
 
         const authInfo = await handleOAuthCallback(window.location.href, {
           clientId,
-          redirectUri: window.location.origin,
+          redirectUri: DERIV_OAUTH_REDIRECT_URI,
           scopes: 'trade',
         });
 
