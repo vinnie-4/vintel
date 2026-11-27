@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { clearAuthInfo } from '@/external/deriv-core';
+import { clearAllAuthData } from '@/external/deriv-core';
+import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
 import { useStore } from '@/hooks/useStore';
 import { ErrorLogger } from '@/utils/error-logger';
 
@@ -23,7 +24,9 @@ export const useLogout = () => {
             // This preserves user preferences (theme, language, etc.) while ensuring auth data is cleared
             try {
                 // Clear auth token via vendored deriv-core
-                clearAuthInfo();
+                clearAllAuthData();
+                DerivWSAccountsService.clearStoredAccounts();
+                DerivWSAccountsService.clearCache();
 
                 // Clear auth-related localStorage items
                 localStorage.removeItem('active_loginid');
