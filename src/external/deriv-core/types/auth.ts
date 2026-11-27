@@ -1,27 +1,13 @@
 export interface AuthConfig {
   clientId: string;
   redirectUri: string;
-  /** OAuth scopes as a space-separated string. Defaults to 'trade' */
+  /** OAuth scopes as a space-separated string. Defaults to 'trade'. */
   scopes?: string;
-  /** Affiliate token extracted from the partner referral link */
   affiliateToken?: string;
-  /**
-   * The exact parameter name to use when forwarding the affiliate token to the
-   * OAuth sign-up URL. One of: 't' | 'affiliate_token' | 'sidi' | 'ca'.
-   * Defaults to 't' when not set (e.g. for sidc / track.deriv.com formats).
-   */
   affiliateTokenParam?: 't' | 'affiliate_token' | 'sidi' | 'ca';
-  /** UTM campaign identifier (e.g., 'dynamicworks' or 'myaffiliates') */
   utmCampaign?: string;
-  /** UTM source identifier (e.g., 'affiliate_248640') — sign-up attribution only */
   utmSource?: string;
-  /** UTM medium (e.g., 'affiliate') — sign-up attribution only */
   utmMedium?: string;
-  /**
-   * The language the app is currently rendering in, upper-cased onto the
-   * authorize URL so Deriv's login continues in it. Omitted rather than
-   * defaulted when absent: no `lang` lets Deriv resolve its own.
-   */
   lang?: string;
 }
 
@@ -31,7 +17,6 @@ export interface AuthInfo {
   expires_in: number;
   expires_at: number;
   scope: string;
-  refresh_token: string;
 }
 
 export interface DerivAccount {
@@ -44,9 +29,7 @@ export interface DerivAccount {
 }
 
 export interface OTPResponse {
-  data: {
-    url: string;
-  };
+  data: { url: string };
 }
 
 export interface TokenExchangeParams {
